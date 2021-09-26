@@ -42,7 +42,7 @@ class Member
     }
 
     // Main login function
-    public function login($email)
+    public function login($email, $code_type)
     {
         $response = $this->isValidUser($email);
 
@@ -50,12 +50,12 @@ class Member
             // See if auth cookie exists for the user.
             if (!isset($_COOKIE[$this->kcbCookie])) {
                 // If sendText is true (default), then send a text based upon their email account.
-                $response = $this->sendAuthRequest($email);
+                $response = $this->sendAuthRequest($email, $code_type);
             } else {
                 // Validate that the cookie auth code matches what is in the database
                 if (!$this->isValidAuthCookie($email)) {
                     // Send auth email, user's cookie is bad
-                    if ($this->sendAuthRequest($email) <> 'db_error') {
+                    if ($this->sendAuthRequest($email, $code_type) <> 'db_error') {
                         $response = "auth_failed_invalid_cookie";
                     } else {
                         $response = "db_error";
@@ -98,14 +98,14 @@ class Member
     }
 
     // Verify auth cd
-    public function verifyAuthCd($email, $auth_cd, $auth_remember)
+    public function verifyAuthCd($email, $code_type, $auth_cd, $auth_remember)
     {
         // Verify user is still valid
         $response = $this->isValidUser($email);
 
         if ($response == "valid") {
             $ipAddress = $this->getIpAddress();
-            $authCdDb = $this->getDb()->getAuthCd($email);
+            $authCdDb = $this->getDb()->getAuthCd($email, $code_type);
 
             // See if auth_cd matches
             if ($auth_cd == $authCdDb['auth_cd']) {
@@ -113,7 +113,7 @@ class Member
                 $authCdDtTm = strtotime($authCdDb['lst_tran_dt_tm']) + 60 * $this->MAX_EXPIRE;
 
                 if (date(time()) > $authCdDtTm) {
-                    if ($this->sendAuthRequest($email) <> 'db_error') {
+                    if ($this->sendAuthRequest($email, $code_type) <> 'db_error') {
                         $response = "auth_old";
                     } else {
                         $response = "db_error";
@@ -141,8 +141,9 @@ class Member
                         }
                     }
                 }
-            } else {
-                if ($this->upInvalidCdCount($email) == "db_error") {
+            } 
+            else {
+                if ($this->upInvalidCdCount($email, $code_type) == "db_error") {
                     $response = "db_error";
                 } else {
                     $response = "auth_invalid";
@@ -201,8 +202,8 @@ class Member
             // Validate account auth cd isn't locked out
             $accountLocked = $this->getDb()->accountLockedStatus($email);
 
-            if ($accountLocked != '') {
-                $response =  "over_max_requests__" . date('D, M j g:i A', strtotime($accountLocked) + 3600);
+            if ($accountLocked) {
+                $response = "over_max_requests";
             }
         } else {
             $response = "invalid";
@@ -212,27 +213,37 @@ class Member
     }
 
     // If user has a text/carrier entered, send as text. If not, send as email.
-    private function sendAuthRequest($email)
+    private function sendAuthRequest($email, $code_type)
     {
         $member = $this->getDb()->getMember($email);
 
-        if (isset($member['text']) && $member['text'] !== "") {
-            // User has texting enabled, send auth code as text
-            $six_digit_random_number = mt_rand(100000, 999999);
-            $response = $this->authCodeLogic($email, $six_digit_random_number);
-
-            // If valid
-            if ($response == "auth_required_no_cookie") {
-                $message = "Your KCB Members security code is " . $six_digit_random_number . ". It will expire in " . $this->MAX_EXPIRE . " minutes.";
-                $textAddress = $member['text'] . "@" . $member['carrier'];
-
-                if (!$this->getKcb()->sendEmail($textAddress, $message, "", false)) {
-                    $response = "Unable to send login code email. Please try again later.";
+        if($code_type === "text") {
+            // Check to see if the user has a valid text address
+            if (isset($member['text']) && $member['text'] !== "") {
+                $six_digit_random_number = mt_rand(100000, 999999);
+                $response = $this->authCodeLogic($email, $code_type, $six_digit_random_number);
+    
+                // If valid
+                if ($response == "auth_required_no_cookie") {
+                    $message = "Your KCB Members security code is " . $six_digit_random_number . ". It will expire in " . $this->MAX_EXPIRE . " minutes.";
+                    $textAddress = $member['text'] . "@" . $member['carrier'];
+    
+                    if (!$this->getKcb()->sendEmail($textAddress, $message, "", false)) {
+                        $response = "Unable to send login code. Please try again later.";
+                    }
                 }
             }
-        } else {
-            // User doesn't have a text address. Send them an email.
+            else {
+                $code_type = "email";
+            }
+        }
+
+        if($code_type === "email") {
             $response = $this->sendAuthEmail($email, $member);
+        }
+
+        if($code_type !== "text" && $code_type !== "email") {
+            $response = "invalid_code_type";
         }
 
         return $response;
@@ -242,7 +253,7 @@ class Member
     private function sendAuthEmail($email, $member)
     {
         $six_digit_random_number = mt_rand(100000, 999999);
-        $response = $this->authCodeLogic($email, $six_digit_random_number);
+        $response = $this->authCodeLogic($email, "email", $six_digit_random_number);
 
         // If valid
         if ($response == "auth_required_no_cookie") {
@@ -271,12 +282,12 @@ class Member
         return $response;
     }
 
-    private function authCodeLogic($email, $six_digit_random_number)
+    private function authCodeLogic($email, $code_type, $six_digit_random_number)
     {
         $response = "auth_required_no_cookie";
         $ipAddress = $this->getIpAddress();
         $member = $this->getDb()->getMember($email);
-        $authCdDb = $this->getDb()->getAuthCd($email);
+        $authCdDb = $this->getDb()->getAuthCd($email, $code_type);
 
         if ($authCdDb) {
             $authCdDtTm = strtotime($authCdDb['lst_tran_dt_tm']) + 60 * $this->MAX_EXPIRE;
@@ -285,13 +296,13 @@ class Member
             if (date(time()) <= $authCdDtTm) {
                 $response = "auth_cd_not_expired";
             } else {
-                if (!$this->getDb()->setLoginCd($member['UID'], $six_digit_random_number, "0", $ipAddress)) {
+                if (!$this->getDb()->setLoginCd($member['UID'], $code_type, $six_digit_random_number, "0", $ipAddress)) {
                     $response = "db_error";
                 }
             }
         } else {
             // Users first time logging in, just insert a new record
-            if (!$this->getDb()->setLoginCd($member['UID'], $six_digit_random_number, "0", $ipAddress)) {
+            if (!$this->getDb()->setLoginCd($member['UID'], $code_type, $six_digit_random_number, "0", $ipAddress)) {
                 $response = "db_error";
             }
         }
@@ -339,17 +350,16 @@ class Member
     }
 
     // Increase the invalid cd count
-    private function upInvalidCdCount($email)
+    private function upInvalidCdCount($email, $code_type)
     {
         $response = "valid";
-        $invCount = $this->getDb()->getInvalidCount($email) + 1;
+        $invCount = $this->getDb()->getInvalidCount($email, $code_type) + 1;
         $ipAddress = $this->getIpAddress();
 
         // Update login cd invalid_count
-        if (!$this->getDb()->setLoginCdInvalidCount($email, $ipAddress, strval($invCount))) {
+        if (!$this->getDb()->setLoginCdInvalidCount($email, $code_type, $ipAddress, strval($invCount))) {
             // Update login count and last login date.
             $this->getDb()->updateLastLogin($email);
-
             $response =  "db_error";
         }
 

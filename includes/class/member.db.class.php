@@ -68,28 +68,38 @@ class MemberDB
         return $this->getDb()->query("SELECT m.uid, CONCAT(m.lastName, ', ', m.firstName) AS fullName, GROUP_CONCAT(DISTINCT email_address) AS `email`, m.text, m.estbd_dt_tm, GROUP_CONCAT(DISTINCT li.display_text) AS `instrument` FROM KCB_Members m LEFT OUTER JOIN KCB_email_address e ON e.member_uid = m.UID LEFT OUTER JOIN KCB_instrument i ON m.uid = i.member_uid LEFT OUTER JOIN lkp_instrument li ON i.instrument = li.instrument WHERE m.accountType = 3 and disabled = 0 GROUP BY m.UID ORDER BY lastName, firstName");
     }
 
-    // Checks that the account shouldn't be locked out because more than 3 auth_code attempts were made in the last hour.
+    // Checks that the account shouldn't be locked out because more than 3 auth_code attempts were made in the last hour to the account.
     public function accountLockedStatus($email)
     {
+        // Ignore code_type. If total is > 2, user is blocked from logging in.
         $this->getDb()->bind("email", $email);
-        return $this->getDb()->single("SELECT l.lst_tran_dt_tm FROM KCB_login_cd l INNER JOIN KCB_Members m ON l.KCB_Members_UID=m.uid INNER JOIN KCB_email_address e ON e.member_uid=m.uid WHERE l.invalid_count >= 3 AND DATE_ADD(l.lst_tran_dt_tm, INTERVAL 1 HOUR) > now() AND e.email_address = :email");
+        $nbrInvalid =  $this->getDb()->single("SELECT SUM(l.invalid_count) FROM KCB_login_cd l INNER JOIN KCB_Members m ON l.KCB_Members_UID=m.uid INNER JOIN KCB_email_address e ON e.member_uid=m.uid WHERE  DATE_ADD(l.lst_tran_dt_tm, INTERVAL 1 HOUR) > now() AND e.email_address = :email");
+    
+        if($nbrInvalid > 2) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
-    // Gets only the Auth_cd from the Login Cd table
-    public function getAuthCd($email)
+    // Gets the Auth_cd from the login_cd table
+    public function getAuthCd($email, $code_type)
     {
         $this->getDb()->bind("email", $email);
-        return $this->getDb()->row("SELECT lc.auth_cd, lc.lst_tran_dt_tm FROM KCB_login_cd lc INNER JOIN KCB_email_address e ON e.member_uid=lc.KCB_Members_UID WHERE e.email_address = :email");
+        $this->getDb()->bind("code_type", $code_type);
+        return $this->getDb()->row("SELECT lc.auth_cd, lc.lst_tran_dt_tm FROM KCB_login_cd lc INNER JOIN KCB_email_address e ON e.member_uid=lc.KCB_Members_UID WHERE e.email_address = :email AND lc.auth_cd_type = :code_type");
     }
 
     // Get Invalid Count
-    public function getInvalidCount($email)
+    public function getInvalidCount($email, $code_type)
     {
         $this->getDb()->bind("email", $email);
-        return $this->getDb()->single("SELECT lc.invalid_count FROM KCB_login_cd lc INNER JOIN KCB_email_address e ON e.member_uid=lc.KCB_Members_UID WHERE e.email_address = :email");
+        $this->getDb()->bind("code_type", $code_type);
+        return $this->getDb()->single("SELECT lc.invalid_count FROM KCB_login_cd lc INNER JOIN KCB_email_address e ON e.member_uid=lc.KCB_Members_UID WHERE e.email_address = :email AND lc.auth_cd_type = :code_type");
     }
 
-    // Gets whether or not user accout has an address record
+    // Gets whether or not user account has an address record
     public function getMemberAddressCount($uid)
     {
         $this->getDb()->bind("uid", $uid);
@@ -139,21 +149,23 @@ class MemberDB
     }
 
     // Updates the login_cd invalid count
-    public function setLoginCdInvalidCount($email, $ipAddress, $invalidCount)
+    public function setLoginCdInvalidCount($email, $code_type, $ipAddress, $invalidCount)
     {
         $this->getDb()->bind("email", $email);
+        $this->getDb()->bind("code_type", $code_type);
         $this->getDb()->bind("invalid_count", $invalidCount);
         $this->getDb()->bind("ip_address", $ipAddress);
 
-        $retVal = $this->getDb()->query("UPDATE KCB_login_cd l INNER JOIN KCB_email_address e ON e.member_uid=l.KCB_Members_UID SET l.invalid_count = :invalid_count, l.ip_address = :ip_address, l.lst_tran_dt_tm = now() WHERE e.email_address = :email");
+        $retVal = $this->getDb()->query("UPDATE KCB_login_cd l INNER JOIN KCB_email_address e ON e.member_uid=l.KCB_Members_UID SET l.invalid_count = :invalid_count, l.ip_address = :ip_address, l.lst_tran_dt_tm = now() WHERE e.email_address = :email AND l.auth_cd_type = :code_type");
 
         return $retVal;
     }
 
     // Upserts login_cd
-    public function setLoginCd($uid, $randomNumber, $invalidCount, $ipAddress)
+    public function setLoginCd($uid, $code_type, $randomNumber, $invalidCount, $ipAddress)
     {
         $this->getDb()->bind("KCB_Members_UID", $uid);
+        $this->getDb()->bind("code_type", $code_type);
         $this->getDb()->bind("auth_cd", $randomNumber);
         $this->getDb()->bind("invalid_count", $invalidCount);
         $this->getDb()->bind("ip_address", $ipAddress);
@@ -162,7 +174,7 @@ class MemberDB
         $this->getDb()->bind("ip_address_upd", $ipAddress);
         $this->getDb()->bind("auth_cd_upd", $randomNumber);
 
-        $retVal = $this->getDb()->query("INSERT INTO KCB_login_cd (KCB_Members_UID, auth_cd, invalid_count, ip_address, estbd_dt_tm, lst_tran_dt_tm) VALUES(:KCB_Members_UID, :auth_cd, :invalid_count, :ip_address, now(), now()) ON DUPLICATE KEY UPDATE auth_cd=:auth_cd_upd, ip_address=:ip_address_upd, invalid_count=:invalid_count_upd, lst_tran_dt_tm=now()");
+        $retVal = $this->getDb()->query("INSERT INTO KCB_login_cd (KCB_Members_UID, auth_cd, auth_cd_type, invalid_count, ip_address, estbd_dt_tm, lst_tran_dt_tm) VALUES(:KCB_Members_UID, :auth_cd, :code_type, :invalid_count, :ip_address, now(), now()) ON DUPLICATE KEY UPDATE auth_cd=:auth_cd_upd, auth_cd_type=:code_type, ip_address=:ip_address_upd, invalid_count=:invalid_count_upd, lst_tran_dt_tm=now()");
 
         return $retVal;
     }

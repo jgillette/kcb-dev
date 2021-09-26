@@ -19,7 +19,7 @@ $("#memberLogin").click(function () {
 			type: "GET",
 			url: "/membersServer.php",
 			cache: false,
-			data: {email: $("#email").val().trim()}
+			data: {email: $("#email").val().trim(), codeType: $('input[name=codeType]:checked').val()}
 		}).done(function( msg ) {
 			if (msg == "valid") {
 				window.location = "members/index.php";
@@ -48,12 +48,14 @@ $("#memberLogin").click(function () {
 				alert("Sorry, your cookie has either been lost or corrupted. Please re-authenticate.");
 				$("#div_auth").show();
 			}
-			else if(msg.lastIndexOf("over_max_requests", 0) === 0) {
-				var timeout = msg.substring(msg.indexOf("__")+2,msg.length)
-				alert("Sorry, your account has been disabled due to too many invalid login attempts.\n\nPlease try again after " + timeout);
+			else if(msg == "over_max_requests") {
+				alert("Sorry, you cannot login due to too many Auth Code failures.\n\nPlease try again later.");
 			}
 			else if(msg == "db_error") {
 				alert("Oops! We had a problem communicating with the database. Please try again later.");
+			}
+			else if(msg == "invalid_code_type") {
+				alert("The Auth Code type provided is not valid. Please refresh the page and try again.");
 			}
 			else {
 				alert("Unable to login. Please try again later. Msg: " + msg);
@@ -66,13 +68,13 @@ $("#memberLogin").click(function () {
 			type: "GET",
 			url: "/membersServer.php",
 			cache: false,
-			data: {email: $("#email").val().trim(), auth_cd: $("#auth_cd").val(), auth_remember: $("#auth_remember").is(':checked')}
+			data: {email: $("#email").val().trim(), auth_cd: $("#auth_cd").val(), auth_remember: $("#auth_remember").is(':checked'), codeType: $('input[name=codeType]:checked').val()}
 		}).done(function( msg ) {
 			if (msg == "valid") {
 				window.location = "members/index.php";
 			}
 			else if(msg == "auth_invalid") {
-				alert("Sorry that auth code was not valid.");
+				alert("Sorry that Auth Code was not valid.");
 				$("#auth_cd").val("");
 				$("#auth_cd").focus();
 			}
@@ -82,7 +84,7 @@ $("#memberLogin").click(function () {
 				$("#email").focus();
 			}
 			else if(msg == "auth_old") {
-				alert("That Auth Code has expired. A new auth code has been sent.");
+				alert("That Auth Code has expired. A new Auth Code has been sent.");
 				$("#auth_cd").val("");
 				$("#auth_cd").focus();
 			}
@@ -92,6 +94,9 @@ $("#memberLogin").click(function () {
 			}
 			else if(msg == "db_error") {
 				alert("Oops! We had a problem communicating with the database. Please try again later.");
+			}
+			else if(msg == "invalid_code_type") {
+				alert("The Auth Code type provided is not valid. Please refresh the page and try again.");
 			}
 			else {
 				alert("Unable to validate auth code. Msg: " + msg);
