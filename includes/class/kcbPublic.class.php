@@ -28,6 +28,16 @@ class KCBPublic
         return $this->getDb()->getHomepageMessages();
     }
 
+    public function emailTest() {
+        if ($this->kcb->sendEmail("web@keystoneconcertband.com", "", "Test")) {
+            $response = "success";
+        } else {
+            $response = "Unable to save request. Please try again later.";
+        }
+
+        return $response;        
+    }
+
     public function JoinSubmit($joinArray)
     {
         $webUser = "JOIN_REQUEST";

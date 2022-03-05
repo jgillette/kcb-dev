@@ -1,8 +1,18 @@
 <?php
+            ini_set('display_errors', 1);
+            ini_set('display_startup_errors', 1);
+            error_reporting(-1);
+
     /*
 		This class is the base KCB class. All top level functions should be included here
 	*/
+    use PHPMailer\PHPMailer\PHPMailer;
+    use PHPMailer\PHPMailer\SMTP;
+    use PHPMailer\PHPMailer\Exception;
 
+    require("3rd-party/phpmailer-6.5.3/Exception.php");
+    require("3rd-party/phpmailer-6.5.3/PHPMailer.php");
+    require("3rd-party/phpmailer-6.5.3/SMTP.php");
     require("log.class.php");
 
 class KcbBase
@@ -27,7 +37,29 @@ class KcbBase
 
     public function sendEmail($toAddress, $message, $title, $html = true)
     {
+        $mail = new PHPMailer(true);
+
         try {
+            //Server settings
+            $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
+            $mail->isSMTP();                                            //Send using SMTP
+            $mail->Host       = 'keystoneconcertband-com.mail.protection.outlook.com';                   //Set the SMTP server to send through
+            $mail->SMTPAuth   = false;                                   //Enable SMTP authentication
+            $mail->Port       = 25;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+
+            //Recipients
+            $mail->setFrom('web@keystoneconcertband.com', 'Keystone Concert Band');
+            $mail->addAddress('JonathanG@keystoneconcertband.com', 'Jonathan Gillette');     //Add a recipient
+
+            //Content
+            $mail->isHTML(true);                                  //Set email format to HTML
+            $mail->Subject = 'Test email';
+            $mail->Body    = 'This is the HTML message body <b>in bold!</b>';
+            $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+
+            return $mail->send();
+
+            /*
             if ($html) {
                 // To send HTML mail, the Content-type header must be set
                 $headers[] = 'MIME-Version: 1.0';
@@ -40,6 +72,7 @@ class KcbBase
             $headers[] = 'X-Mailer: PHP/' . phpversion();
 
             return mail($toAddress, $title, $message, implode("\r\n", $headers));
+            */
         } catch (Exception $e) {
             $this->LogError($e->getMessage());
             return false;
