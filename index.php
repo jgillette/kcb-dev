@@ -13,8 +13,8 @@
 	</head>
 	<body>
 		<div id="fb-root"></div>
+		<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v16.0&appId=183258391082442&autoLogAppEvents=1" nonce="XBkyxwt4"></script>
 		<? require('includes/nav.php'); ?>
-
 		<div id="myCarousel" class="carousel slide" data-ride="carousel">
 			<!-- Indicators -->
 			<ol class="carousel-indicators">
@@ -24,7 +24,7 @@
 			</ol>
 			<div class="carousel-inner" role="listbox">
 				<div class="active item">
-					<div class="fill" style="background-image:url('images/slide1.png');">
+					<div class="fill" style="background-image:url('images/slide6.png');">
 						<div class="container">
 							<div class="carousel-caption">
 								<h1>We need you</h1>
@@ -35,7 +35,7 @@
 					</div>
 				</div>
 				<div class="item">
-					<div class="fill" style="background-image:url('images/slide2.png');">
+					<div class="fill" style="background-image:url('images/slide9.png');">
 						<div class="container">
 							<div class="carousel-caption">
 								<h1>Play with us</h1>
@@ -46,7 +46,7 @@
 					</div>
 				</div>
 				<div class="item">
-					<div class="fill" style="background-image:url('images/slide5.png');">
+					<div class="fill" style="background-image:url('images/slide8.png');">
 						<div class="container">
 							<div class="carousel-caption">
 								<h1>We can play for you</h1>
@@ -85,22 +85,6 @@
 		<div class="container marketing">
 			<!-- Three columns of text below the carousel -->
 			<div class="row">
-				<!--
-				<div class="col-lg-4">
-				<img class="img-circle" src="images/donate.png" alt="Donate Image" width="140" height="140">
-				<h2>Donate Today!</h2>
-				<p>Due to the COVID-19 Pandemic, the Keystone Concert Band has not been able to perform any concerts. 
-					Any amount you can give will help keep the band paying for expenses like rehearsal space, insurance and storage.
-				 </p>
-				 <p><form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-						<input type="hidden" name="cmd" value="_s-xclick">
-						<input type="hidden" name="hosted_button_id" value="MQXJRRA53VYHA">
-						<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-						<img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
-					</form>
-				</p>
-				</div>
-				 -->
 				<div class="col-lg-4">
 					<img class="img-circle" src="images/logo_concert.jpg" alt="Upcoming Concert Image" width="140" height="140">
 					<h2>Upcoming Concert</h2>
@@ -122,7 +106,7 @@
 									$begin = date('D, M d', strtotime($concert['concertBegin']));
 								}
 				
-								echo "<h4>" . $begin . " | " . date('g:iA', strtotime($concert['concertBegin'])) . " to " . date('g:iA', strtotime($concert['concertEnd'])) . "</h4>";			
+								echo "<h4>" . $begin . " at " . date('g:iA', strtotime($concert['concertBegin'])) . "</h4>";			
 								echo "<h4><a href='https://maps.google.com/maps?q=" . urlencode($concert['address']) . "' target='_blank' style='border-bottom:none;'>" . $concert['Title'] . "</a></h4>";
 								echo "<img src='" . $location . "' alt='Google Maps location of the concert.' usemap='#map' id='map'>";
 								echo "<map name='map'><area shape='circle' coords='250,80,15' href='https://maps.google.com/maps?q=" . urlencode($concert['address']) . "' target='_blank' alt='Location of concert on the map'></map>";
@@ -145,26 +129,23 @@
 							?>
 						</div>
 					<? } //End if concert ?>
-				</div><!-- /.col-lg-4 -->
+				</div><!-- /.col-lg- -->
 				<div class="col-lg-4">
 					<img class="img-circle" src="images/logo_facebook.png" alt="Facebook Image" width="140" height="140">
 					<h2>Facebook</h2>
 					<p>Join our Facebook page for the latest information and upcoming concerts.</p>
-					<div class="fb-page" data-href="https://www.facebook.com/keystoneconcertband/" data-tabs="events" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true">
-						<div class="fb-xfbml-parse-ignore">
-								<blockquote cite="https://www.facebook.com/keystoneconcertband/">
-								<a href="https://www.facebook.com/keystoneconcertband/">Keystone Concert Band</a>
-							</blockquote>
-						</div>
+					<div class="fb-page" data-href="https://www.facebook.com/keystoneconcertband/" data-tabs="timeline" data-width="" data-height="" data-small-header="true" data-adapt-container-width="true" data-hide-cover="true" data-show-facepile="true">
+						<blockquote cite="https://www.facebook.com/keystoneconcertband/" class="fb-xfbml-parse-ignore">
+							<a href="https://www.facebook.com/keystoneconcertband/">Keystone Concert Band</a>
+						</blockquote>
 					</div>
 				</div><!-- /.col-lg-4 -->
 				<div class="col-lg-4">
-					<img class="img-circle" src="images/logo_amazonSmile.png" alt="Amazon Smile Image" width="140" height="140">
-					<h2>Amazon Smile</h2>
-					<p>Use amazon.com, buy products, and your purchases contribute to Amazon donations to the band! 
-					<br>
-					As of March 2021, KCB has received over $375 from all your purchases!</p>
-					<p><a class="btn btn-default" href="amazon.php" role="button">View details &raquo;</a></p>
+					<img class="img" src="images/donate-2023.png" alt="Donate" width="140" height="140">
+					<h2>Donate</h2>
+					<p>As a 501(c)3 organization, we rely on donations to perform!
+					</p>
+					<p><a class="btn btn-default" href="donate.php" role="button">View details &raquo;</a></p>
 				</div><!-- /.col-lg-4 -->
 			</div><!-- /.row -->
 			<? require('includes/footer.php'); ?>
@@ -172,7 +153,6 @@
 
 		<? require('includes/common_js.php'); ?>
 		<script>
-			(function(d, s, id) {var js, fjs = d.getElementsByTagName(s)[0];if (d.getElementById(id)) return;js = d.createElement(s); js.id = id;js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.5";fjs.parentNode.insertBefore(js, fjs);}(document, 'script', 'facebook-jssdk'));
 			function showAlerts()
 			{
 				$("#bandAlerts").toggle();

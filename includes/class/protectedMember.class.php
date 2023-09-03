@@ -67,7 +67,7 @@
 		
 		// Gets the current active members
 		public function getInactiveMembers() {
-			if(isset($_SESSION['office']) && $_SESSION['office'] !== '') {
+			if ($this->validAdmin()) {
 				return $this->getDb()->getInactiveMembers();
 			}
 			else {
@@ -86,7 +86,7 @@
 		}
 		
 		public function addMember($mbrArray) {
-			if(isset($_SESSION['office']) && $_SESSION['office'] !== '') {
+			if ($this->validAdmin()) {
 				$retValue = "success";
 				$updateUser = $_SESSION["email"];
 				$instrument = "";
@@ -203,7 +203,7 @@
 		}
 		
 		public function addPendingMember($uid, $mbrArray) {
-			if(isset($_SESSION['office']) && $_SESSION['office'] !== '') {
+			if ($this->validAdmin()) {
 				$retValue = "success";
 				$updateUser = $_SESSION["email"];
 				$instrument = "";
@@ -260,7 +260,7 @@
 		}
 		
 		public function removeMember($uid, $deleteEmailAddress) {
-			if(isset($_SESSION['office']) && $_SESSION['office'] !== '') {
+			if ($this->validAdmin()) {
 				$retValue = "success";
 				$updateUser = $_SESSION["email"];
 				
@@ -318,6 +318,18 @@
 		}
 		
 		/* PRIVATE FUNCTIONS */
+		private function validAdmin()
+		{
+			$validSession = false;
+			if (isset($_SESSION['accountType']) && $_SESSION['accountType'] !== "") {
+				if($_SESSION['accountType'] === 1 || $_SESSION['accountType'] === 2) {
+					$validSession = true;
+				}
+			}
+	
+			return $validSession;
+		}
+		
 		// Determines whether to add or update an email address
 		private function upsertAddress($uid, $mbrArray, $updateUser) {
 			// check whether address exists
@@ -373,7 +385,7 @@
 							$subscribeBody = "subscribe KCBPassword nodigest";
 
 							mail('members-request@keystoneconcertband.com', '', $subscribeBody, implode("\r\n", $headerPend));
-							mail('web@keystoneconcerband.com','KCB Email Update','(pend) Add email: ' . $value, implode("\r\n", $notificationHeader));
+							mail('web@keystoneconcerband.com, j.gillette@icloud.com','KCB Email Update','(pend) Add email: ' . $value, implode("\r\n", $notificationHeader));
 						}
 						catch(Exception $e) {
 							$this->getKcb()->LogError($e->getMessage());
@@ -401,7 +413,7 @@
 							// Pending users were added above, so no need to re-add again.
 							if(!$pendingUser) {
 								mail('members-request@keystoneconcertband.com', '', $subscribeBody, implode("\r\n", $headerAdd));
-								mail('web@keystoneconcerband.com','KCB Email Update','Add email: ' . $value, implode("\r\n", $notificationHeader));
+								mail('web@keystoneconcerband.com, j.gillette@icloud.com','KCB Email Update','Add email: ' . $value, implode("\r\n", $notificationHeader));
 							}
 					    	$result = $this->getDb()->addEmail($value, $uid, $_SESSION["email"]);						
 						}
@@ -425,7 +437,7 @@
 			            
 						try {
 							mail('members-request@keystoneconcertband.com', '', $unsubscribeBody, implode("\r\n", $headerDel));
-							mail('web@keystoneconcertband.com','KCB Email Update','Remove email: ' . $value, implode("\r\n", $notificationHeader));
+							mail('web@keystoneconcertband.com, j.gillette@icloud.com','KCB Email Update','Remove email: ' . $value, implode("\r\n", $notificationHeader));
 							
 							if($delEmail) {
 								$result = $this->getDb()->delEmail($value, $uid);
